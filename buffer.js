@@ -29,30 +29,30 @@
     if (!noAssert) {
       ast(offset !== undefined && offset !== null, 'missing offset');
       ast(offset >= 0, 'trying to read at negative offset');
-      ast(offset + bytes - 1 < self.length, 'Trying to read beyond buffer length');
+      ast(offset + bytes <= self.length, 'Trying to read beyond buffer length');
     }
   }
 
   /* Write Assertion Helper */
-  function write_ast(self, value, offset, noAssert, bytes, max, min){
+  function write_ast(self, value, offset, noAssert, bytes, max, min, fract){
     if (!noAssert) {
       min = min || 0x0;
       ast(value !== undefined && value !== null, 'missing value');
       ast(offset >= 0, 'trying to write at negative offset');
-      ast(offset + bytes - 1 < self.length, 'trying to write beyond buffer length');
+      ast(offset + bytes <= self.length, 'trying to write beyond buffer length');
       /* value */
       ast(typeof value == 'number', 'cannot write a non-number as a number');
       ast(value >= min, min == 0 ? 'specified a negative value for writing an unsigned value'
           : 'value smaller than minimum allowed value');
       ast(value <= max, 'value is larger than maximum' + min == 0 ? 'value for type' : 'allowed value');
-      ast(M.floor(value) === value, 'value has a fractional component');
+      ast(fract || M.floor(value) === value, 'value has a fractional component');
     }
   }
 
   /* Cooking Assertion with specified arguments */
-  function cook_ast(bytes, max, min){
+  function cook_ast(bytes, max, min, fract){
     return max ? function(self, value, offset, noAssert){ /* write_ast */
-      write_ast(self, value, offset, noAssert, bytes, max, min);
+      write_ast(self, value, offset, noAssert, bytes, max, min, fract);
     } : function(self, offset, noAssert){ /* read_ast */
       read_ast(self, offset, noAssert, bytes);
     };
@@ -70,8 +70,8 @@
   write8s_ast = cook_ast(1, 0x7f, -0x80),
   write16s_ast = cook_ast(2, 0x7fff, -0x8000),
   write32s_ast = cook_ast(4, 0x7fffffff, -0x80000000),
-  write32_ast = cook_ast(4, 3.4028234663852886e+38, -3.4028234663852886e+38),
-  write64_ast = cook_ast(8, 1.7976931348623157E+308, -1.7976931348623157E+308);
+  write32_ast = cook_ast(4, 3.4028234663852886e+38, -3.4028234663852886e+38, true),
+  write64_ast = cook_ast(8, 1.7976931348623157E+308, -1.7976931348623157E+308, true);
 
   if(typeof ArrayBuffer != und &&
      typeof DataView != und &&
@@ -84,6 +84,8 @@
       var buf = new ArrayBuffer(data);
       return wrap(buf, 0, buf.byteLength);
     };
+
+    Buffer.hasDataView = true;
 
     function wrap(buf, start, end){
       // Wrong but ideologically more correct:
@@ -198,11 +200,11 @@
         return this.setInt16(offset, value, false);
       },
       writeInt32LE: function(value, offset, noAssert){
-        write_ast(this, value, offset, noAssert);
+        write32s_ast(this, value, offset, noAssert);
         return this.setInt32(offset, value, true);
       },
       writeInt32BE: function(value, offset, noAssert){
-        write_ast(this, value, offset, noAssert);
+        write32s_ast(this, value, offset, noAssert);
         return this.setInt32(offset, value, false);
       },
       /* writeFloats */
