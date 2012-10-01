@@ -127,31 +127,6 @@
     ast(start >= 0 && start < end && end <= self.length, 'oob');
   }
 
-  /* Fill Assertion Helper */
-  function fill_ast(self, value, start, end){
-    ast(typeof value === 'number' && !isNaN(value), 'value is not a number');
-    ast(end >= start, 'end < start');
-    ast(start >= 0 && start < this.length, 'start out of bounds');
-    ast(end > 0 && end <= this.length, 'end out of bounds');
-  }
-
-  /* Copy Assertion Helper */
-  function copy_ast(self, target, target_start, start, end){
-    ast(end >= start, 'sourceEnd < sourceStart');
-    ast(target_start >= 0 && target_start < target.length, 'targetStart out of bounds');
-    ast(start >= 0 && start < self.length, 'sourceStart out of bounds');
-    ast(end >= 0 && end <= self.length, 'sourceEnd out of bounds');
-  }
-
-  function write_ast(self, string, offset, length, encoding){
-    ast(typeof string == 'string', 'Argument must be a string');
-    return enc_ast(encoding);
-  }
-
-  function read_ast(self, encoding, start, end){
-    return enc_ast(encoding);
-  }
-
   /* Get Assertion Helper */
   function get_ast(self, offset, noAssert, bytes){
     if (!noAssert) {
@@ -480,75 +455,97 @@
       case 'utf8':
       default:
         return u8e(string).length;
-        /*
-        var t,
+        // function u8l(string){
+        /*var t,
         c = 0,
         i = 0;
         for(; i < string.length; ){
           t = string.charCodeAt(i++);
           for(c++; t >>>= 8; c++);
         }
-        return c;
-         */
+        return c;*/
+        // }
       }
     }
   });
 
   mix(Buffer.prototype, {
+    /* Buffer value access */
+    /* Buffer operations */
     write: function(string, offset, length, encoding){
+      var self = this,
+      i = 0;
       offset = offset || 0;
-      length = length || this.length - offset;
-      encoding = write_ast(this, string, offset, length, encoding);
+      length = length || self.length - offset;
+      /* Assertion */
+      ast(typeof string == 'string', 'Argument must be a string');
+      encoding = enc_ast(encoding);
+      /* Decode source string with specified encoding to binary string */
       string = encoding == 'utf8' ? u8e(string) :
         encoding == 'ucs2' ? u2e(string) :
         encoding == 'hex' ? hxe(string) :
         encoding == 'base64' ? atob(string) :
         string;
-      for(var i = 0; i < string.length; this.writeUInt8(string.charCodeAt(i), i++));
+      /* Write binary string to buffer */
+      for(; i < string.length; self.writeUInt8(string.charCodeAt(i), offset + i++));
     },
     copy: function(target, offset, start, end){
       offset = offset || 0;
       start = start || 0;
-      end = end || this.length;
-      copy_ast(this, target, offset, start, end);
-      for(var i = start; i < end; i++){
-        target.writeUInt8(this.readUInt8(i), offset + i);
-      }
+      var self = this,
+      i = start;
+      end = end || self.length;
+      /* Assertion */
+      ast(end >= start, 'sourceEnd < sourceStart');
+      ast(offset >= 0 && offset < target.length, 'targetStart out of bounds');
+      ast(start >= 0 && start < self.length, 'sourceStart out of bounds');
+      ast(end >= 0 && end <= self.length, 'sourceEnd out of bounds');
+      /* Copy */
+      for(; i < end; target.writeUInt8(self.readUInt8(i), offset + i++));
     },
     fill: function(value, offset, end){
       offset = offset || 0;
-      end = end || this.length;
+      var self = this,
+      i = offset;
+      end = end || self.length;
       if(typeof value == 'string'){
         value = value.charCodeAt(0); // (sic!) no ucs2 check
       }
-      fill_ast(this, value, offset, end);
-      for(var i = offset; i < end; i++){
-        this.writeUInt8(value, i);
-      }
+      /* Assertion */
+      ast(typeof value === 'number' && !isNaN(value), 'value is not a number');
+      ast(end >= offset, 'end < start');
+      ast(offset >= 0 && offset < self.length, 'start out of bounds');
+      ast(end > 0 && end <= self.length, 'end out of bounds');
+      /* Fill */
+      for(; i < end; self.writeUInt8(value, i++));
     },
     INSPECT_MAX_BYTES: 50,
     inspect: function(length){
-      var i = 0,
+      var self = this,
+      i = 0,
       bytes = '',
       h;
-      length = M.min(this.INSPECT_MAX_BYTES, this.length, length || this.length);
+      length = M.min(self.INSPECT_MAX_BYTES, self.length, length || self.length);
       for(; i < length; ){
-        h = this.readUInt8(i++).toString(16);
+        h = self.readUInt8(i++).toString(16);
         bytes += ' ' + (h.length < 2 ? '0' : '') + h;
       }
-      return '<Buffer' + bytes + (i < this.length ? ' ... ' : '') + '>';
+      return '<Buffer' + bytes + (i < self.length ? ' ... ' : '') + '>';
     },
     toString: function(encoding, start, end){
-      if(arguments.length < 1){
-        return this.inspect();
-      }
-      start = start || 0;
-      end = end || this.length;
-      encoding = read_ast(this, encoding, start, end);
-      /* produce binary string from buffer data */
-      var i = start,
+      var self = this,
+      i = start || 0,
       r = '';
-      for(; i < end; r += String.fromCharCode(this.readUInt8(i++)));
+      if(arguments.length < 1){
+        return self.inspect();
+      }
+      start = i;
+      end = end || self.length;
+      /* Accertion */
+      encoding = enc_ast(encoding);
+      /* Produce binary string from buffer data */
+      for(; i < end; r += String.fromCharCode(self.readUInt8(i++)));
+      /* Decode binary string to specified encoding */
       return encoding == 'utf8' ? u8d(r) :
         encoding == 'ucs2' ? u2d(r) :
         encoding == 'hex' ? hxd(r) :
