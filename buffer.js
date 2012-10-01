@@ -1,6 +1,7 @@
 (function(){
   var M = Math,
   pow = M.pow,
+  ArraySlice = Array.prototype.slice,
   und = 'undefined',
   c2c = String.fromCharCode,
   non_enc = /[^0-9a-z]/g,
@@ -12,8 +13,7 @@
     base64:0,
     binary:0
   },
-  non_hex = /[^0-9A-Fa-f]/g,
-  Buffer;
+  non_hex = /[^0-9A-Fa-f]/g;
 
   function mix(dst, src, safe){
     for(var i in src){
@@ -72,11 +72,22 @@
     i = 0,
     c;
     for(; i < str.length; ){
-      c = str.charCodeAt(i++).toString(16);
+      c = (str.charCodeAt(i++) & 0xff).toString(16);
       for(; c.length < 2; c = '0' + c);
       ret += c;
     }
     return ret;
+  }
+
+  /* Generalized Constructor */
+  function Buffer(data, encoding){
+    if(!(this instanceof Buffer)){
+      return new Buffer(data, encoding);
+    }
+    var len = buffer_len(data, encoding),
+    buf = wrap(this, 0, len);
+    buffer_write(buf, data, encoding);
+    return buf;
   }
 
   /* Assertion Helper */
@@ -180,157 +191,48 @@
      typeof DataView != und &&
      {}.__proto__){
 
-    Buffer = function(data, encoding){
-      if(!(this instanceof Buffer)){
-        return new Buffer(data, encoding);
-      }
-      var len = buffer_len(data, encoding),
-      buf = wrap(new ArrayBuffer(len), 0, len);
-      buffer_write(buf, data, encoding);
-      return buf;
-    };
-
-    Buffer.hasDataView = true;
-
-    function wrap(buf, start, end){
+    var wrap = function(self, start, end){
       // Wrong but ideologically more correct:
       // DataView.call(this, buf)
-      var self = new DataView(buf, start, end - start);
+      self = new DataView(self.buffer ||
+                          new ArrayBuffer(end - start), // (sic!) potentially this may have problem
+                          start, end - start);
       self.__proto__ = Buffer.prototype;
       self.length = self.byteLength;
       return self;
-    }
+    },
 
-    function DataViewProxy(){}
+    cook_val = function(type, write){
+      return DataView.prototype[(write ? 'set' : 'get') + type];
+    },
+
+    readUInt8 = cook_val('Uint8'),
+    readUInt16 = cook_val('Uint16'),
+    readUInt32 = cook_val('Uint32'),
+
+    readInt8 = cook_val('Int8'),
+    readInt16 = cook_val('Int16'),
+    readInt32 = cook_val('Int32'),
+
+    readFloat = cook_val('Float32'),
+    readDouble = cook_val('Float64'),
+
+    writeUInt8 = cook_val('Uint8', 1),
+    writeUInt16 = cook_val('Uint16', 1),
+    writeUInt32 = cook_val('Uint32', 1),
+
+    writeInt8 = cook_val('Int8', 1),
+    writeInt16 = cook_val('Int16', 1),
+    writeInt32 = cook_val('Int32', 1),
+
+    writeFloat = cook_val('Float32', 1),
+    writeDouble = cook_val('Float64', 1),
+
+    DataViewProxy = function(){};
     DataViewProxy.prototype = DataView.prototype;
+    Buffer.prototype =new DataViewProxy();
 
-    Buffer.prototype = mix(new DataViewProxy(), {
-      slice: function(start, end){
-        start = start || 0;
-        end = end || this.length;
-        slice_ast(this, start, end);
-        return wrap(this.buffer, start, end);
-      },
-      /* readUInts */
-      readUInt8: function(offset, noAssert){
-        read8_ast(this, offset, noAssert);
-        return this.getUint8(offset);
-      },
-      readUInt16LE: function(offset, noAssert){
-        read16_ast(this, offset, noAssert);
-        return this.getUint16(offset, true);
-      },
-      readUInt16BE: function(offset, noAssert){
-        read16_ast(this, offset, noAssert);
-        return this.getUint16(offset, false);
-      },
-      readUInt32LE: function(offset, noAssert){
-        read32_ast(this, offset, noAssert);
-        return this.getUint32(offset, true);
-      },
-      readUInt32BE: function(offset, noAssert){
-        read32_ast(this, offset, noAssert);
-        return this.getUint32(offset, false);
-      },
-      /* readInts */
-      readInt8: function(offset, noAssert){
-        read8_ast(this, offset, noAssert);
-        return this.getInt8(offset);
-      },
-      readInt16LE: function(offset, noAssert){
-        read16_ast(this, offset, noAssert);
-        return this.getInt16(offset, true);
-      },
-      readInt16BE: function(offset, noAssert){
-        read16_ast(this, offset, noAssert);
-        return this.getInt16(offset, false);
-      },
-      readInt32LE: function(offset, noAssert){
-        read32_ast(this, offset, noAssert);
-        return this.getInt32(offset, true);
-      },
-      readInt32BE: function(offset, noAssert){
-        read32_ast(this, offset, noAssert);
-        return this.getInt32(offset, false);
-      },
-      /* readFloats */
-      readFloatLE: function(offset, noAssert){
-        read32_ast(this, offset, noAssert);
-        return this.getFloat32(offset, true);
-      },
-      readFloatBE: function(offset, noAssert){
-        read32_ast(this, offset, noAssert);
-        return this.getFloat32(offset, false);
-      },
-      readDoubleLE: function(offset, noAssert){
-        read64_ast(this, offset, noAssert);
-        return this.getFloat64(offset, true);
-      },
-      readDoubleBE: function(offset, noAssert){
-        read64_ast(this, offset, noAssert);
-        return this.getFloat64(offset, false);
-      },
-      /* writeUInts */
-      writeUInt8: function(value, offset, noAssert){
-        write8u_ast(this, value, offset, noAssert);
-        return this.setUint8(offset, value);
-      },
-      writeUInt16LE: function(value, offset, noAssert){
-        write16u_ast(this, value, offset, noAssert);
-        return this.setUint16(offset, value, true);
-      },
-      writeUInt16BE: function(value, offset, noAssert){
-        write16u_ast(this, value, offset, noAssert);
-        return this.setUint16(offset, value, false);
-      },
-      writeUInt32LE: function(value, offset, noAssert){
-        write32u_ast(this, value, offset, noAssert);
-        return this.setUint32(offset, value, true);
-      },
-      writeUInt32BE: function(value, offset, noAssert){
-        write32u_ast(this, value, offset, noAssert);
-        return this.setUint32(offset, value, false);
-      },
-      /* writeInts */
-      writeInt8: function(value, offset, noAssert){
-        write8s_ast(this, value, offset, noAssert);
-        return this.setInt8(offset, value);
-      },
-      writeInt16LE: function(value, offset, noAssert){
-        write16s_ast(this, value, offset, noAssert);
-        return this.setInt16(offset, value, true);
-      },
-      writeInt16BE: function(value, offset, noAssert){
-        write16s_ast(this, value, offset, noAssert);
-        return this.setInt16(offset, value, false);
-      },
-      writeInt32LE: function(value, offset, noAssert){
-        write32s_ast(this, value, offset, noAssert);
-        return this.setInt32(offset, value, true);
-      },
-      writeInt32BE: function(value, offset, noAssert){
-        write32s_ast(this, value, offset, noAssert);
-        return this.setInt32(offset, value, false);
-      },
-      /* writeFloats */
-      writeFloatLE: function(value, offset, noAssert){
-        write32_ast(this, value, offset, noAssert);
-        return this.setFloat32(offset, value, true);
-      },
-      writeFloatBE: function(value, offset, noAssert){
-        write32_ast(this, value, offset, noAssert);
-        return this.setFloat32(offset, value, false);
-      },
-      writeDoubleLE: function(value, offset, noAssert){
-        write64_ast(this, value, offset, noAssert);
-        return this.setFloat64(offset, value, true);
-      },
-      writeDoubleBE: function(value, offset, noAssert){
-        write64_ast(this, value, offset, noAssert);
-        return this.setFloat64(offset, value, false);
-      }
-    });
-
+    Buffer.hasDataView = true;
   }else{
     /**
      * Function readIEEE754 and writeIEEE754 forked from
@@ -430,6 +332,8 @@
       }
 
     };
+
+
   }
 
   mix(Buffer, {
@@ -471,7 +375,131 @@
 
   mix(Buffer.prototype, {
     /* Buffer value access */
+    /* readUInts */
+    readUInt8: function(offset, noAssert){
+      read8_ast(this, offset, noAssert);
+      return readUInt8.call(this, offset);
+    },
+    readUInt16LE: function(offset, noAssert){
+      read16_ast(this, offset, noAssert);
+      return readUInt16.call(this, offset, true);
+    },
+    readUInt16BE: function(offset, noAssert){
+      read16_ast(this, offset, noAssert);
+      return readUInt16.call(this, offset, false);
+    },
+    readUInt32LE: function(offset, noAssert){
+      read32_ast(this, offset, noAssert);
+      return readUInt32.call(this, offset, true);
+    },
+    readUInt32BE: function(offset, noAssert){
+      read32_ast(this, offset, noAssert);
+      return readUInt32.call(this, offset, false);
+    },
+    /* readInts */
+    readInt8: function(offset, noAssert){
+      read8_ast(this, offset, noAssert);
+      return readInt8.call(this, offset);
+    },
+    readInt16LE: function(offset, noAssert){
+      read16_ast(this, offset, noAssert);
+      return readInt16.call(this, offset, true);
+    },
+    readInt16BE: function(offset, noAssert){
+      read16_ast(this, offset, noAssert);
+      return readInt16.call(this, offset, false);
+    },
+    readInt32LE: function(offset, noAssert){
+      read32_ast(this, offset, noAssert);
+      return readInt32.call(this, offset, true);
+    },
+    readInt32BE: function(offset, noAssert){
+      read32_ast(this, offset, noAssert);
+      return readInt32.call(this, offset, false);
+    },
+    /* readFloats */
+    readFloatLE: function(offset, noAssert){
+      read32_ast(this, offset, noAssert);
+      return readFloat.call(this, offset, true);
+    },
+    readFloatBE: function(offset, noAssert){
+      read32_ast(this, offset, noAssert);
+      return readFloat.call(this, offset, false);
+    },
+    readDoubleLE: function(offset, noAssert){
+      read64_ast(this, offset, noAssert);
+      return readDouble.call(this, offset, true);
+    },
+    readDoubleBE: function(offset, noAssert){
+      read64_ast(this, offset, noAssert);
+      return readDouble.call(this, offset, false);
+    },
+    /* writeUInts */
+    writeUInt8: function(value, offset, noAssert){
+      write8u_ast(this, value, offset, noAssert);
+      return writeUInt8.call(this, offset, value);
+    },
+    writeUInt16LE: function(value, offset, noAssert){
+      write16u_ast(this, value, offset, noAssert);
+      return writeUInt16.call(this, offset, value, true);
+    },
+    writeUInt16BE: function(value, offset, noAssert){
+      write16u_ast(this, value, offset, noAssert);
+      return writeUInt16.call(this, offset, value, false);
+    },
+    writeUInt32LE: function(value, offset, noAssert){
+      write32u_ast(this, value, offset, noAssert);
+      return writeUInt32.call(this, offset, value, true);
+    },
+    writeUInt32BE: function(value, offset, noAssert){
+      write32u_ast(this, value, offset, noAssert);
+      return writeUInt32.call(this, offset, value, false);
+    },
+    /* writeInts */
+    writeInt8: function(value, offset, noAssert){
+      write8s_ast(this, value, offset, noAssert);
+      return writeInt8.call(this, offset, value);
+    },
+    writeInt16LE: function(value, offset, noAssert){
+      write16s_ast(this, value, offset, noAssert);
+      return writeInt16.call(this, offset, value, true);
+    },
+    writeInt16BE: function(value, offset, noAssert){
+      write16s_ast(this, value, offset, noAssert);
+      return writeInt16.call(this, offset, value, false);
+    },
+    writeInt32LE: function(value, offset, noAssert){
+      write32s_ast(this, value, offset, noAssert);
+      return writeInt32.call(this, offset, value, true);
+    },
+    writeInt32BE: function(value, offset, noAssert){
+      write32s_ast(this, value, offset, noAssert);
+      return writeInt32.call(this, offset, value, false);
+    },
+    /* writeFloats */
+    writeFloatLE: function(value, offset, noAssert){
+      write32_ast(this, value, offset, noAssert);
+      return writeFloat.call(this, offset, value, true);
+    },
+    writeFloatBE: function(value, offset, noAssert){
+      write32_ast(this, value, offset, noAssert);
+      return writeFloat.call(this, offset, value, false);
+    },
+    writeDoubleLE: function(value, offset, noAssert){
+      write64_ast(this, value, offset, noAssert);
+      return writeDouble.call(this, offset, value, true);
+    },
+    writeDoubleBE: function(value, offset, noAssert){
+      write64_ast(this, value, offset, noAssert);
+      return writeDouble.call(this, offset, value, false);
+    },
     /* Buffer operations */
+    slice: function(start, end){
+      start = start || 0;
+      end = end || this.length;
+      slice_ast(this, start, end);
+      return wrap(this, start, end);
+    },
     write: function(string, offset, length, encoding){
       var self = this,
       i = 0;
@@ -487,7 +515,7 @@
         encoding == 'base64' ? atob(string) :
         string;
       /* Write binary string to buffer */
-      for(; i < string.length; self.writeUInt8(string.charCodeAt(i), offset + i++));
+      for(; i < string.length; self.writeUInt8(string.charCodeAt(i) & 0xff, offset + i++));
     },
     copy: function(target, offset, start, end){
       offset = offset || 0;
@@ -517,6 +545,7 @@
       ast(offset >= 0 && offset < self.length, 'start out of bounds');
       ast(end > 0 && end <= self.length, 'end out of bounds');
       /* Fill */
+      value &= 0xff;
       for(; i < end; self.writeUInt8(value, i++));
     },
     INSPECT_MAX_BYTES: 50,
