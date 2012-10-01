@@ -2,6 +2,17 @@
   var M = Math,
   pow = M.pow,
   und = 'undefined',
+  c2c = String.fromCharCode,
+  non_enc = /[^0-9a-z]/g,
+  encodings = {
+    ascii:0,
+    utf8:0,
+    ucs2:0,
+    hex:0,
+    base64:0,
+    binary:0
+  },
+  non_hex = /[^0-9A-Fa-f]/g,
   Buffer;
 
   function mix(dst, src, safe){
@@ -13,9 +24,101 @@
     return dst;
   }
 
+  /* string to utf8 encode */
+  function u8e(str){
+    return unescape(encodeURIComponent(str));
+  }
+
+  /* utf8 to string decode */
+  function u8d(str){
+    return decodeURIComponent(escape(str));
+  }
+
+  /* string to ucs2 encode */
+  function u2e(str){
+    var ret = '',
+    i = 0,
+    val;
+    for(; i < str.length; ){
+      val = str.charCodeAt(i++);
+      ret += c2c(val % 256) + c2c(val >>> 8);
+    }
+    return ret;
+  }
+
+  /* ucs2 to string decode */
+  function u2d(str){
+    var ret = '',
+    i = 0;
+    for(; i < str.length; ){
+      ret += c2c(str.charCodeAt(i++) + (str.charCodeAt(i++) << 8));
+    }
+    return ret;
+  }
+
+  /* hex to binary encode */
+  function hxe(str){
+    var ret = '',
+    i = 0;
+    for(; i < str.length; i++){
+      ret += String.fromCharCode(parseInt(str.substr(i++, 2), 16));
+    }
+    return ret;
+  }
+
+  /* binary to hex decode */
+  function hxd(str){
+    var ret = '',
+    i = 0,
+    c;
+    for(; i < str.length; ){
+      c = str[i++].toString(16);
+      for(; c.length < 2; c = '0' + c);
+      ret += c;
+    }
+    return ret;
+  }
+
+  /* Assertion Helper */
   function ast(val, msg){
     if(!val){
       throw new Error(msg);
+    }
+  }
+
+  /* Encoding Assertion Helper */
+  function enc_ast(encoding){
+    encoding = (encoding || 'utf8').toLowerCase().replace(non_enc, '');
+    ast(encoding in encodings, 'Unknown encoding');
+    return encoding;
+  }
+
+  /* Hex String Assertion Helper */
+  function hex_ast(val){
+    ast(!(val.length % 2) && val.search(non_hex) < 0, 'Invalid hex string');
+  }
+
+  /* Initial Buffer Length Helper */
+  function buffer_len(data, encoding){
+    encoding = enc_ast(encoding);
+    if(typeof data == 'number'){
+      return data > 0 ? data : 0;
+    }else if(typeof data == 'string'){
+      return Buffer.byteLength(data, encoding);
+    }else if(data instanceof Array){
+      return data.length;
+    }
+    return 0;
+  }
+
+  function buffer_write(self, data, encoding){
+    if(typeof data == 'string'){
+      self.write(data, 0, self.length, encoding);
+    }else if(data instanceof Array){
+      for(var i = 0; i < data.length; i++){
+        //self['write' + (data[i] < 0 ? '' : 'U') + 'Int8'](data[i], i);
+        self.writeUInt8(data[i], i, true);
+      }
     }
   }
 
@@ -24,8 +127,33 @@
     ast(start >= 0 && start < end && end <= self.length, 'oob');
   }
 
-  /* Read Assertion Helper */
-  function read_ast(self, offset, noAssert, bytes){
+  /* Fill Assertion Helper */
+  function fill_ast(self, value, start, end){
+    ast(typeof value === 'number' && !isNaN(value), 'value is not a number');
+    ast(end >= start, 'end < start');
+    ast(start >= 0 && start < this.length, 'start out of bounds');
+    ast(end > 0 && end <= this.length, 'end out of bounds');
+  }
+
+  /* Copy Assertion Helper */
+  function copy_ast(self, target, target_start, start, end){
+    ast(end >= start, 'sourceEnd < sourceStart');
+    ast(target_start >= 0 && target_start < target.length, 'targetStart out of bounds');
+    ast(start >= 0 && start < self.length, 'sourceStart out of bounds');
+    ast(end >= 0 && end <= self.length, 'sourceEnd out of bounds');
+  }
+
+  function write_ast(self, string, offset, length, encoding){
+    ast(typeof string == 'string', 'Argument must be a string');
+    return enc_ast(encoding);
+  }
+
+  function read_ast(self, encoding, start, end){
+    return enc_ast(encoding);
+  }
+
+  /* Get Assertion Helper */
+  function get_ast(self, offset, noAssert, bytes){
     if (!noAssert) {
       ast(offset !== undefined && offset !== null, 'missing offset');
       ast(offset >= 0, 'trying to read at negative offset');
@@ -33,8 +161,8 @@
     }
   }
 
-  /* Write Assertion Helper */
-  function write_ast(self, value, offset, noAssert, bytes, max, min, fract){
+  /* Set Assertion Helper */
+  function set_ast(self, value, offset, noAssert, bytes, max, min, fract){
     if (!noAssert) {
       min = min || 0x0;
       ast(value !== undefined && value !== null, 'missing value');
@@ -52,9 +180,9 @@
   /* Cooking Assertion with specified arguments */
   function cook_ast(bytes, max, min, fract){
     return max ? function(self, value, offset, noAssert){ /* write_ast */
-      write_ast(self, value, offset, noAssert, bytes, max, min, fract);
+      set_ast(self, value, offset, noAssert, bytes, max, min, fract);
     } : function(self, offset, noAssert){ /* read_ast */
-      read_ast(self, offset, noAssert, bytes);
+      get_ast(self, offset, noAssert, bytes);
     };
   }
 
@@ -81,8 +209,10 @@
       if(!(this instanceof Buffer)){
         return new Buffer(data, encoding);
       }
-      var buf = new ArrayBuffer(data);
-      return wrap(buf, 0, buf.byteLength);
+      var len = buffer_len(data, encoding),
+      buf = wrap(new ArrayBuffer(len), 0, len);
+      buffer_write(buf, data, encoding);
+      return buf;
     };
 
     Buffer.hasDataView = true;
@@ -332,32 +462,98 @@
       return obj instanceof Buffer;
     },
     byteLength: function(string, encoding){
-
+      encoding = enc_ast(encoding);
+      ast(typeof string == 'string', 'Argument must be a string');
+      switch(encoding){
+      case 'ascii':
+      case 'binary':
+        return string.length;
+      case 'hex':
+        //hex_ast(string); /* NodeJS don't checks it here, so we also keep this feature */
+        return string.length >>> 1;
+        //return M.ceil(string.length / 2);
+      case 'base64':
+        var e = string.search(/=/);
+        return (string.length * 3 >>> 2) - (e < 0 ? 0 : (string.length - e));
+      case 'ucs2':
+        return string.length * 2;
+      case 'utf8':
+      default:
+        return u8e(string).length;
+        /*
+        var t,
+        c = 0,
+        i = 0;
+        for(; i < string.length; ){
+          t = string.charCodeAt(i++);
+          for(c++; t >>>= 8; c++);
+        }
+        return c;
+         */
+      }
     }
   });
 
   mix(Buffer.prototype, {
-    INSPECT_MAX_BYTES: 50,
     write: function(string, offset, length, encoding){
-
+      offset = offset || 0;
+      length = length || this.length - offset;
+      encoding = write_ast(this, string, offset, length, encoding);
+      string = encoding == 'utf8' ? u8e(string) :
+        encoding == 'ucs2' ? u2e(string) :
+        encoding == 'hex' ? hxe(string) :
+        encoding == 'base64' ? atob(string) :
+        '';
+      for(var i = 0; i < string.length; this.writeUInt8(string.charCodeAt(i), i++));
     },
-    copy: function(targetBuffer, targetStart, sourceStart, sourceEnd){
-
+    copy: function(target, offset, start, end){
+      offset = offset || 0;
+      start = start || 0;
+      end = end || this.length;
+      copy_ast(this, target, offset, start, end);
+      for(var i = start; i < end; i++){
+        target.writeUInt8(this.readUInt8(i), offset + i);
+      }
     },
     fill: function(value, offset, end){
-
-    },
-    toString: function(enc){
-      if(!enc){
-        var bytes = '',
-        h,
-        i = 0;
-        for(; i < M.min(this.INSPECT_MAX_BYTES, this.length); ){
-          h = this.readUInt8(i++).toString(16);
-          bytes += ' ' + (h.length < 2 ? '0' : '') + h;
-        }
-        return '<Buffer' + bytes + (i < this.length ? ' ... ' : '') + '>';
+      offset = offset || 0;
+      end = end || this.length;
+      if(typeof value == 'string'){
+        value = value.charCodeAt(0); // (sic!) no ucs2 check
       }
+      fill_ast(this, value, offset, end);
+      for(var i = offset; i < end; i++){
+        this.writeUInt8(value, i);
+      }
+    },
+    INSPECT_MAX_BYTES: 50,
+    inspect: function(length){
+      var i = 0,
+      bytes = '',
+      h;
+      length = M.min(this.INSPECT_MAX_BYTES, this.length, length || this.length);
+      for(; i < length; ){
+        h = this.readUInt8(i++).toString(16);
+        bytes += ' ' + (h.length < 2 ? '0' : '') + h;
+      }
+      return '<Buffer' + bytes + (i < this.length ? ' ... ' : '') + '>';
+    },
+    toString: function(encoding, start, end){
+      if(arguments.length < 1){
+        return this.inspect();
+      }
+      start = start || 0;
+      end = end || this.length;
+      encoding = read_ast(this, encoding, start, end);
+      /* produce binary string from buffer data */
+      var i = start,
+      r = '';
+      for(; i < end; r += String.fromCharCode(this.readUInt8(i++)));
+      return encoding == 'utf8' ? u8d(r) :
+        encoding == 'ucs2' ? u2d(r) :
+        encoding == 'hex' ? hxd(r) :
+        encoding == 'base64' ? btoa(r) :
+        '';
     }
   });
 
