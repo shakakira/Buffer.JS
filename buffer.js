@@ -72,7 +72,7 @@
     i = 0,
     c;
     for(; i < str.length; ){
-      c = str[i++].toString(16);
+      c = str.charCodeAt(i++).toString(16);
       for(; c.length < 2; c = '0' + c);
       ret += c;
     }
@@ -503,7 +503,7 @@
         encoding == 'ucs2' ? u2e(string) :
         encoding == 'hex' ? hxe(string) :
         encoding == 'base64' ? atob(string) :
-        '';
+        string;
       for(var i = 0; i < string.length; this.writeUInt8(string.charCodeAt(i), i++));
     },
     copy: function(target, offset, start, end){
@@ -553,7 +553,7 @@
         encoding == 'ucs2' ? u2d(r) :
         encoding == 'hex' ? hxd(r) :
         encoding == 'base64' ? btoa(r) :
-        '';
+        r;
     }
   });
 
