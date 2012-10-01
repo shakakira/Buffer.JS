@@ -1,0 +1,13 @@
+* Overview
+  This is a [[http://nodejs.org/][NodeJS]]'s [[http://nodejs.org/api/buffer.html][Buffer]] implementation for browser's [[http://en.wikipedia.org/wiki/ECMAScript][ECMAScript]] environment.
+  
+** Features
+   + Using [[https://developer.mozilla.org/en-US/docs/JavaScript_typed_arrays/ArrayBuffer][ArrayBuffer]] with [[https://developer.mozilla.org/en-US/docs/JavaScript_typed_arrays/DataView][DataView]] when it's available.
+   + Using [[https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Array][Array]] as default backend.
+
+** Limitations
+   + In compatibility purposes avoid to use indexing (like buffer[i]),
+     because this feature available only when using DataView backend.
+
+* Docs
+  Read official [[http://nodejs.org/api/buffer.html][NodeJS Buffer]] documentation here.
