@@ -19,7 +19,7 @@ function test(code, asts){
     code = code.join('\n');
   }
   try{
-    run = new Function('ast', code + ';ast(' + asts.join(');ast(') + ');');
+    run = new Function('ast', code + '\n\nast(' + asts.join(')\nast(') + ')\n');
   }catch(e){
     errors.push('Parsing failed: ' + e + '\n' + code);
   }
