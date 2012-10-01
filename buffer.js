@@ -90,6 +90,13 @@
     return buf;
   }
 
+  if(typeof window != und){
+    if(typeof window.Buffer == 'object'){
+      mix(Buffer, window.Buffer, true);
+    }
+    window.Buffer = Buffer;
+  }
+
   /* Assertion Helper */
   function ast(val, msg){
     if(!val){
@@ -189,7 +196,8 @@
 
   if(typeof ArrayBuffer != und &&
      typeof DataView != und &&
-     {}.__proto__){
+     {}.__proto__ &&
+     Buffer.useDataView !== false){
 
     var wrap = function(self, start, end){
       // Wrong but ideologically more correct:
@@ -241,14 +249,14 @@
      * git://github.com/toots/buffer-browserify.git
      */
 
-    function readIEEE754(buffer, offset, isBE, mLen, nBytes) {
+    function readIEEE754(buffer, offset, isLE, mLen, nBytes) {
       var e, m,
       eLen = nBytes * 8 - mLen - 1,
       eMax = (1 << eLen) - 1,
       eBias = eMax >> 1,
       nBits = -7,
-      i = isBE ? 0 : (nBytes - 1),
-      d = isBE ? 1 : -1,
+      i = isLE ? (nBytes - 1) : 0,
+      d = isLE ? -1 : 1,
       s = buffer[offset + i];
 
       i += d;
@@ -274,14 +282,14 @@
       return (s ? -1 : 1) * m * pow(2, e - mLen);
     }
 
-    function writeIEEE754(buffer, value, offset, isBE, mLen, nBytes) {
+    function writeIEEE754(buffer, offset, value, isLE, mLen, nBytes) {
       var e, m, c,
       eLen = nBytes * 8 - mLen - 1,
       eMax = (1 << eLen) - 1,
       eBias = eMax >> 1,
       rt = (mLen === 23 ? pow(2, -24) - pow(2, -77) : 0),
-      i = isBE ? (nBytes - 1) : 0,
-      d = isBE ? -1 : 1,
+      i = isLE ? 0 : (nBytes - 1),
+      d = isLE ? 1 : -1,
       s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0;
 
       value = M.abs(value);
@@ -326,14 +334,88 @@
       buffer[offset + i - d] |= s * 128;
     }
 
-    Buffer = function(data, encoding){
-      if(!(this instanceof Buffer)){
-        return new Buffer(data, encoding);
+    var wrap = function(self, start, end){
+      if(!self.buffer){ /* init */
+        if(end - start > 0){
+          var buffer = self.buffer = new Array(end - start);
+          /* touch */
+          for(var i = start; i < buffer.length; buffer[i++] = 0);
+        }
+      }else{
+        var parent = self;
+        self = Buffer();
+        self.buffer = parent.buffer;
       }
+      self.offset = start;
+      self.length = end - start;
+      return self;
+    },
 
+    /* readOps */
+    readUInt8 = function(offset){
+      return this.buffer[this.offset + offset];
+    },
+    readUInt16 = function(offset, isLE){
+      return readUInt8.call(this, offset + (isLE ? 1 : 0)) << 8
+        | readUInt8.call(this, offset + (isLE ? 0 : 1));
+    },
+    readUInt32 = function(offset, isLE){
+      //return (readUInt16.call(this, offset + (isLE ? 2 : 0), isLE) << 16) | // it's wrong!
+      return (readUInt16.call(this, offset + (isLE ? 2 : 0), isLE) << 15) * 2 // we use this instead
+        + readUInt16.call(this, offset + (isLE ? 0 : 2), isLE);
+    },
+
+    readInt8 = function(offset){
+      offset = readUInt8.call(this, offset);
+      return offset & 0x80 ? offset - 0x100 : offset;
+    },
+    readInt16 = function(offset, isLE){
+      offset = readUInt16.call(this, offset, isLE);
+      return offset & 0x8000 ? offset - 0x10000 : offset;
+    },
+    readInt32 = function(offset, isLE){
+      offset = readUInt32.call(this, offset, isLE);
+      return offset & 0x80000000 ? offset - 0x100000000 : offset;
+    },
+
+    readFloat = function(offset, isLE){
+      return readIEEE754(this.buffer, this.offset + offset, isLE, 23, 4);
+    },
+    readDouble = function(offset, isLE){
+      return readIEEE754(this.buffer, this.offset + offset, isLE, 52, 8);
+    },
+
+    /* writeOps */
+    writeUInt8 = function(offset, value){
+      this.buffer[this.offset + offset] = value;// & 0xff;
+    },
+    writeUInt16 = function(offset, value, isLE){
+      //value &= 0xffff;
+      writeUInt8.call(this, offset + (isLE ? 1 : 0), value >>> 8);
+      writeUInt8.call(this, offset + (isLE ? 0 : 1), value & 0xff);
+    },
+    writeUInt32 = function(offset, value, isLE){
+      //value &= 0xffffffff;
+      writeUInt16.call(this, offset + (isLE ? 2 : 0), value >>> 16, isLE);
+      writeUInt16.call(this, offset + (isLE ? 0 : 2), value & 0xffff, isLE);
+    },
+
+    writeInt8 = function(offset, value){
+      writeUInt8.call(this, offset, value < 0 ? value + 0x100 : value);
+    },
+    writeInt16 = function(offset, value, isLE){
+      writeUInt16.call(this, offset, value < 0 ? value + 0x10000 : value, isLE);
+    },
+    writeInt32 = function(offset, value, isLE){
+      writeUInt32.call(this, offset, value < 0 ? value + 0x100000000 : value, isLE);
+    },
+
+    writeFloat = function(offset, value, isLE){
+      return writeIEEE754(this.buffer, this.offset + offset, value, isLE, 23, 4);
+    },
+    writeDouble = function(offset, value, isLE){
+      return writeIEEE754(this.buffer, this.offset + offset, value, isLE, 52, 8);
     };
-
-
   }
 
   mix(Buffer, {
@@ -582,8 +664,4 @@
         r;
     }
   });
-
-  if(typeof window != und){
-    window.Buffer = Buffer;
-  }
 })();
