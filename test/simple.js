@@ -80,3 +80,15 @@ test([
   'a.readDoubleBE(8) == 2e-300',
   'a.readDoubleLE(16) == -1e+300'
 ]);
+
+test([
+  'var a = Buffer(12)',
+
+  'a.writeUInt32BE(0xffffffff, 0)',
+  'a.writeInt32BE(0x7fffffff, 4)',
+  'a.writeInt32BE(-0x80000000, 8)'
+], [
+  'a.readUInt32BE(0) == 0xffffffff',
+  'a.readInt32BE(4) == 0x7fffffff',
+  'a.readInt32BE(8) == -0x80000000'
+]);
