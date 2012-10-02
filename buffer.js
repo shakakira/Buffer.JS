@@ -632,7 +632,7 @@
       ast(typeof string == 'string', 'Argument must be a string');
       encoding = enc_ast(encoding);
       /* Decode source string with specified encoding to binary string */
-      string = encodings[encoding][0](string);
+      string = encodings[encoding][0].call(root, string);
       /* Write binary string to buffer */
       for(; i < length; self.writeUInt8(string.charCodeAt(i) & 0xff, offset + i++));
       return length;
@@ -695,7 +695,7 @@
       /* Produce binary string from buffer data */
       for(; i < end; string += String.fromCharCode(self.readUInt8(i++)));
       /* Decode binary string to specified encoding */
-      return encodings[encoding][1](string);
+      return encodings[encoding][1].call(root, string);
     }
   });
 })();
