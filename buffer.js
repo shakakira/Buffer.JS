@@ -13,13 +13,14 @@
   und = 'undefined',
   c2c = String.fromCharCode,
   non_enc = /[^0-9a-z]/g,
+  pass = function(a){return a;},
   encodings = {
-    ascii:0,
-    utf8:0,
-    ucs2:0,
-    hex:0,
-    base64:0,
-    binary:0
+    ascii:[pass, pass],
+    binary:[pass, pass],
+    utf8:[u8e, u8d],
+    ucs2:[u2e, u2d],
+    hex:[hxe, hxd],
+    base64:[atob, btoa]
   },
   non_hex = /[^0-9A-Fa-f]/g;
 
@@ -635,11 +636,7 @@
       ast(typeof string == 'string', 'Argument must be a string');
       encoding = enc_ast(encoding);
       /* Decode source string with specified encoding to binary string */
-      string = encoding == 'utf8' ? u8e(string) :
-        encoding == 'ucs2' ? u2e(string) :
-        encoding == 'hex' ? hxe(string) :
-        encoding == 'base64' ? atob(string) :
-        string;
+      string = encodings[encoding][0](string);
       /* Write binary string to buffer */
       for(; i < length; self.writeUInt8(string.charCodeAt(i) & 0xff, offset + i++));
       return length;
@@ -691,7 +688,7 @@
     toString: function(encoding, start, end){
       var self = this,
       i = start || 0,
-      r = '';
+      string = '';
       if(arguments.length < 1){
         return self.inspect();
       }
@@ -700,13 +697,9 @@
       /* Accertion */
       encoding = enc_ast(encoding);
       /* Produce binary string from buffer data */
-      for(; i < end; r += String.fromCharCode(self.readUInt8(i++)));
+      for(; i < end; string += String.fromCharCode(self.readUInt8(i++)));
       /* Decode binary string to specified encoding */
-      return encoding == 'utf8' ? u8d(r) :
-        encoding == 'ucs2' ? u2d(r) :
-        encoding == 'hex' ? hxd(r) :
-        encoding == 'base64' ? btoa(r) :
-        r;
+      return encodings[encoding][1](string);
     }
   });
 })();
