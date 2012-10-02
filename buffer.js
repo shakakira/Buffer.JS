@@ -1,4 +1,12 @@
-(function(){
+/**
+ * Client-side NodeJS's Buffer implementation
+ *
+ * @author 2012, Phoenix Kayo <kayo@ilumium.org>
+ * @license GNU LGPLv3 http://www.gnu.org/licenses/lgpl-3.0.html
+ *
+ * @see Original Buffer Documentation http://nodejs.org/api/buffer.html
+ */
+;(function(){
   var M = Math,
   pow = M.pow,
   ArraySlice = Array.prototype.slice,
