@@ -597,7 +597,8 @@
         encoding == 'base64' ? atob(string) :
         string;
       /* Write binary string to buffer */
-      for(; i < string.length; self.writeUInt8(string.charCodeAt(i) & 0xff, offset + i++));
+      for(; i < length; self.writeUInt8(string.charCodeAt(i) & 0xff, offset + i++));
+      return length;
     },
     copy: function(target, offset, start, end){
       offset = offset || 0;
