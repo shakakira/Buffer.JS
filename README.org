@@ -36,3 +36,32 @@
    
 ** Using Buffer object
    Seed official [[http://nodejs.org/api/buffer.html][NodeJS Buffer]] documentation.
+
+* Status
+  Current version compatibility status:
+
+  | User-Agent | Version | Backend  | Status |
+  |------------+---------+----------+--------|
+  | Chrome     |     1.0 | Array    | OK     |
+  |            |    10.0 | DataView | OK     |
+  |            |    21.0 | DataView | OK     |
+  | Android    |     4.0 | DataView | OK     |
+  |------------+---------+----------+--------|
+  | Safari     |     3.0 | Array    | OK     |
+  |            |     4.0 | Array    | OK     |
+  |            |     5.0 | Array    | OK     |
+  |            |     6.0 |          | --     |
+  |------------+---------+----------+--------|
+  | Firefox    |     1.0 | Array    | OK     |
+  |            |     2.0 | Array    | OK     |
+  |            |     3.0 | Array    | OK     |
+  |            |     4.0 | Array    | OK     |
+  |            |    10.0 | Array    | OK     |
+  |            |    15.0 | DataView | --     |
+  |------------+---------+----------+--------|
+  | Opera      |     8.0 | Array    | OK     |
+  |            |    10.0 | Array    | OK     |
+  |            |    12.0 |          | --     |
+  |------------+---------+----------+--------|
+  | IE         |     6.0 | Array    | OK     |
+  |            |         |          |        |
