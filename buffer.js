@@ -452,6 +452,40 @@
         return c;*/
         // }
       }
+    },
+    concat: function(list/*, totalLength*/) {
+      var args = ArraySlice.call(arguments),
+      totalLength = typeof args[args.length-1] == 'number' ? args.pop() : -1,
+      length = 0,
+      i = 0,
+      bufs = [],
+      buf,
+      ret,
+      skip = 0;
+
+      if (!(list instanceof Array)) {
+        list = args;
+      }
+
+      for(; i < list.length; ){
+        buf = list[i++];
+        if(buf){
+          if(!Buffer.isBuffer(buf)){
+            buf = new Buffer(buf);
+          }
+          length += buf.length;
+          bufs.push(buf);
+        }
+      }
+
+      ret = new Buffer(length = totalLength < 0 ? length : totalLength);
+      for(; bufs.length && skip < length; ){
+        buf = bufs.shift();
+        buf.copy(ret, skip, 0, M.min(buf.length, length - skip));
+        skip += buf.length;
+      }
+
+      return ret;
     }
   });
 
