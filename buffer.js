@@ -11,6 +11,7 @@
   pow = M.pow,
   ArraySlice = Array.prototype.slice,
   und = 'undefined',
+  root = window,
   c2c = String.fromCharCode,
   non_enc = /[^0-9a-z]/g,
   pass = function(a){return a;},
@@ -101,12 +102,10 @@
     return buf;
   }
 
-  if(typeof window != und){
-    if(typeof window.Buffer == 'object'){
-      mix(Buffer, window.Buffer);
-    }
-    window.Buffer = Buffer;
+  if(typeof root.Buffer == 'object'){
+    mix(Buffer, root.Buffer);
   }
+  root.Buffer = Buffer;
 
   /* Assertion Helper */
   function ast(val, msg){
