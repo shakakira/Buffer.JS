@@ -73,7 +73,7 @@
     var ret = '',
     i = 0;
     for(; i < str.length; i++){
-      ret += String.fromCharCode(parseInt(str.substr(i++, 2), 16));
+      ret += c2c(parseInt(str.substr(i++, 2), 16));
     }
     return ret;
   }
@@ -693,7 +693,7 @@
       /* Accertion */
       encoding = enc_ast(encoding);
       /* Produce binary string from buffer data */
-      for(; i < end; string += String.fromCharCode(self.readUInt8(i++)));
+      for(; i < end; string += c2c(self.readUInt8(i++)));
       /* Decode binary string to specified encoding */
       return encodings[encoding][1].call(root, string);
     }
