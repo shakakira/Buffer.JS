@@ -33,5 +33,5 @@ function test(code, asts){
   defer = setTimeout(function(){
     alert(errors.length ? ('Something went wrong...\n\n' + errors.join('\n\n')) :
           'Used backend: ' + (Buffer.hasDataView ? 'DataView' : 'Object') + '\nAll tests passed...');
-  }, 0);
+  }, 1);
 }
