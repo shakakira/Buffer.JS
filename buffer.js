@@ -23,11 +23,13 @@
   },
   non_hex = /[^0-9A-Fa-f]/g;
 
-  function mix(dst, src, safe){
+  function mix(dst, src){
     for(var i in src){
-      if((!(i in dst) || !safe)){
-        dst[i] = src[i];
-      }
+      dst[i] = src[i];
+    }
+    i = 'toString';
+    if(dst[i] !== src[i]){ /* Fuck IE */
+      dst[i] = src[i];
     }
     return dst;
   }
@@ -100,7 +102,7 @@
 
   if(typeof window != und){
     if(typeof window.Buffer == 'object'){
-      mix(Buffer, window.Buffer, true);
+      mix(Buffer, window.Buffer);
     }
     window.Buffer = Buffer;
   }
