@@ -2,6 +2,7 @@
   This is a [[http://nodejs.org/][NodeJS]]'s [[http://nodejs.org/api/buffer.html][Buffer]] implementation for browser's [[http://en.wikipedia.org/wiki/ECMAScript][ECMAScript]] environment.
   
 ** Features
+   + Tiny size (base64.js+buffer.js): <25kB (source), <10kB (minified), <4kB (minified+gzipped)
    + Using /Mozilla's/ [[https://developer.mozilla.org/en-US/docs/DOM/window.btoa][btoa & atob]] functions for base64.
      If it don't supported natively, /pure JS/ implementations will be used (needs /base64.js/).
    + Using [[https://developer.mozilla.org/en-US/docs/JavaScript_typed_arrays/ArrayBuffer][ArrayBuffer]] with [[https://developer.mozilla.org/en-US/docs/JavaScript_typed_arrays/DataView][DataView]] as backend when it's available.
