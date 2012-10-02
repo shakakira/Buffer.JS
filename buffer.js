@@ -149,10 +149,14 @@
     }
   }
 
+  function notnil(value){
+    return value !== undefined && value !== null;
+  }
+
   /* Get Assertion Helper */
   function get_ast(self, offset, noAssert, bytes){
     if (!noAssert) {
-      ast(offset !== undefined && offset !== null, 'missing offset');
+      ast(notnil(offset), 'missing offset');
       ast(offset >= 0, 'trying to read at negative offset');
       ast(offset + bytes <= self.length, 'Trying to read beyond buffer length');
     }
@@ -162,7 +166,8 @@
   function set_ast(self, value, offset, noAssert, bytes, max, min, fract){
     if (!noAssert) {
       min = min || 0x0;
-      ast(value !== undefined && value !== null, 'missing value');
+      ast(notnil(offset), 'missing offset');
+      ast(notnil(value), 'missing value');
       ast(offset >= 0, 'trying to write at negative offset');
       ast(offset + bytes <= self.length, 'trying to write beyond buffer length');
       /* value */
