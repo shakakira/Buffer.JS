@@ -10,7 +10,6 @@
   var M = Math,
   pow = M.pow,
   ArraySlice = Array.prototype.slice,
-  und = 'undefined',
   root = window,
   c2c = String.fromCharCode,
   non_enc = /[^0-9a-z]/g,
@@ -199,8 +198,8 @@
   write32_ast = cook_ast(4, 3.4028234663852886e+38, -3.4028234663852886e+38, true),
   write64_ast = cook_ast(8, 1.7976931348623157E+308, -1.7976931348623157E+308, true);
 
-  if(typeof ArrayBuffer != und &&
-     typeof DataView != und &&
+  if(root.ArrayBuffer &&
+     root.DataView &&
      {}.__proto__ &&
      Buffer.useDataView !== false){
 
