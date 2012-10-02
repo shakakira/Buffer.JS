@@ -151,11 +151,6 @@
     }
   }
 
-  /* Slice Assertion Helper */
-  function slice_ast(self, start, end){
-    ast(start >= 0 && start < end && end <= self.length, 'oob');
-  }
-
   /* Get Assertion Helper */
   function get_ast(self, offset, noAssert, bytes){
     if (!noAssert) {
@@ -622,10 +617,12 @@
     },
     /* Buffer operations */
     slice: function(start, end){
+      var self = this;
       start = start || 0;
-      end = end || this.length;
-      slice_ast(this, start, end);
-      return wrap(this, start, end);
+      end = end || self.length;
+      /* Slice Assertion Helper */
+      ast(start >= 0 && start < end && end <= self.length, 'oob');
+      return wrap(self, start, end);
     },
     write: function(string, offset, length, encoding){
       var self = this,
