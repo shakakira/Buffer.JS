@@ -210,22 +210,92 @@
   write32_ast = cook_ast(4, 3.4028234663852886e+38, -3.4028234663852886e+38, true),
   write64_ast = cook_ast(8, 1.7976931348623157E+308, -1.7976931348623157E+308, true);
 
-  if(Buffer.useArrayBuffer && Buffer.useDataView){
-    var wrap = function(self, start, end){
+  if(Buffer.useArrayBuffer &&
+     (Buffer.useDataView || Buffer.useTypedArrays)){
+
+    var ArrayBuf = ArrayBuffer,
+    DataProxy,
+    wrap = function(self, start, length){
+      if(!length){
+        return self;
+      }
+
+      var buffer = self.buffer || new ArrayBuf(length); // (sic!) potentially this may have problem
+      if(self.offset){
+        start += self.offset;
+      }
       // Wrong but ideologically more correct:
       // DataView.call(this, buf)
-      self = new DataView(self.buffer ||
-                          new ArrayBuffer(end - start), // (sic!) potentially this may have problem
-                          start, end - start);
-      self.__proto__ = Buffer.prototype;
-      self.length = self.byteLength;
+
+      var proxy = new DataProxy(buffer, start, length);
+      proxy.__proto__ = Buffer.prototype;
+      // Firefox disallow to set __proto__ field of Typed Arrays
+      if(proxy.__proto__ === Buffer.prototype){
+        self = proxy;
+      }else{
+        self = Buffer();
+      }
+
+      self.buffer = buffer;
+      self.offset = start;
+      self.length = length;
       return self;
-    },
+    };
 
-    cook_val = function(type, write){
-      return DataView.prototype[(write ? 'set' : 'get') + type];
-    },
+    if(Buffer.useDataView){
+      Buffer.backend = 'DataView';
+      DataProxy = DataView;
 
+      var cook_val = function(type, write){
+        return DataProxy.prototype[(write ? 'set' : 'get') + type];
+      };
+    }else{
+      Buffer.backend = 'TypedArrays';
+      DataProxy = Uint8Array;
+
+      var nativeLE = function(){ /* check is native Little Endian */
+        var buffer = new ArrayBuf();
+        new Uint16Array(buffer)[0] = 1;
+        return !new DataProxy(buffer)[0];
+      }(),
+      fix_order = function(buffer, offset, count, isLE, cons, value){
+        var write = arguments.length > 5,
+        typed;
+        if(count < 2 || nativeLE == isLE){
+          typed = new cons(buffer, offset, 1);
+          if(write){
+            typed[0] = value;
+          }else{
+            return typed[0];
+          }
+        }else{
+          var reversed = new ArrayBuf(count),
+          bytes = new DataProxy(buffer, offset, count),
+          rbytes = new DataProxy(reversed),
+          up = count - 1,
+          i = 0;
+          typed = new cons(reversed);
+          if(write){
+            typed[0] = value;
+            for(; i < count; bytes[up - i] = rbytes[i++]);
+          }else{
+            for(; i < count; rbytes[up - i] = bytes[i++]);
+            return typed[0];
+          }
+        }
+      },
+      cook_val = function(type, write){
+        var cons = root[type + 'Array'],
+        count = parseInt(type.replace(/^\D+/, ''), 10) >>> 3;
+        return write ? function(offset, value, isLE){
+          fix_order(this.buffer, offset + this.offset, count, isLE, cons, value);
+        } : function(offset, isLE){
+          return fix_order(this.buffer, offset + this.offset, count, isLE, cons);
+        };
+      };
+    }
+
+    var
     readUInt8 = cook_val('Uint8'),
     readUInt16 = cook_val('Uint16'),
     readUInt32 = cook_val('Uint32'),
@@ -246,14 +316,16 @@
     writeInt32 = cook_val('Int32', 1),
 
     writeFloat = cook_val('Float32', 1),
-    writeDouble = cook_val('Float64', 1),
+    writeDouble = cook_val('Float64', 1);
 
-    DataViewProxy = function(){};
-    DataViewProxy.prototype = DataView.prototype;
-    Buffer.prototype =new DataViewProxy();
+    // Already not necessary in this
+    /* BufferProxy = function(){};
+     BufferProxy.prototype = DataProxy.prototype;
+     Buffer.prototype = new BufferProxy(); */
 
-    Buffer.hasDataView = true;
   }else{
+    Buffer.backend = 'Array';
+
     /**
      * Function readIEEE754 and writeIEEE754 forked from
      * ysangkok's buffer-browserify
@@ -346,20 +418,23 @@
       buffer[offset + i - d] |= s * 128;
     }
 
-    var wrap = function(self, start, end){
+    var wrap = function(self, start, length){
+      var buffer = self.buffer || length > 0 && new Array(length),
+      i = 0;
+      if(self.offset){
+        start += self.offset;
+      }
       if(!self.buffer){ /* init */
-        if(end - start > 0){
-          var buffer = self.buffer = new Array(end - start);
+        if(buffer){
           /* touch */
-          for(var i = start; i < buffer.length; buffer[i++] = 0);
+          for(; i < length; buffer[start + i++] = 0);
         }
       }else{
-        var parent = self;
         self = Buffer();
-        self.buffer = parent.buffer;
       }
+      self.buffer = buffer;
       self.offset = start;
-      self.length = end - start;
+      self.length = length;
       return self;
     },
 
@@ -628,7 +703,7 @@
       end = end || self.length;
       /* Slice Assertion Helper */
       ast(start >= 0 && start < end && end <= self.length, 'oob');
-      return wrap(self, start, end);
+      return wrap(self, start, end - start);
     },
     write: function(string, offset, length, encoding){
       var self = this,
