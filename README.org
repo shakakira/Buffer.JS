@@ -6,11 +6,11 @@
    + Using /Mozilla's/ [[https://developer.mozilla.org/en-US/docs/DOM/window.btoa][btoa & atob]] functions for base64.
      If it don't supported natively, /pure JS/ implementations will be used (needs /base64.js/).
    + Using [[https://developer.mozilla.org/en-US/docs/JavaScript_typed_arrays/ArrayBuffer][ArrayBuffer]] with [[https://developer.mozilla.org/en-US/docs/JavaScript_typed_arrays/DataView][DataView]] as backend when it's available.
-     It can be disabled by creating object Buffer={useDataView:false} before plugging buffer.js
+     It can be disabled by creating object /Buffer={useDataView:false}/ before plugging buffer.js
    + Using [[https://developer.mozilla.org/en-US/docs/JavaScript_typed_arrays/ArrayBuffer][ArrayBuffer]] with [[https://developer.mozilla.org/en-US/docs/JavaScript_typed_arrays][Typed Arrays]] as backend when it's available and DataView is not.
-     It can be disabled by creating object Buffer={useTypedArrays:false} before plugging buffer.js
+     It can be disabled by creating object /Buffer={useTypedArrays:false}/ before plugging buffer.js
    + Using [[https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Array][Array]] as default backend.
-     It can be forced by creating object Buffer={useArrayBuffer:false} before plugging buffer.js
+     It can be forced by creating object /Buffer={useArrayBuffer:false}/ before plugging buffer.js
      
 ** Limitations
    + In compatibility purposes avoid to use indexing (like /buffer[i]/),
