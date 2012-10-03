@@ -35,5 +35,5 @@ function test(code, asts){
           (errors.length ?
            ('Something went wrong...\n\n' + errors.join('\n\n')) :
            'All tests passed...'));
-  }, 1);
+  }, 100);
 }
