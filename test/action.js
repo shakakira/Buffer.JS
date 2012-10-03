@@ -1,21 +1,37 @@
+// a [ 0 1 2 3 4 5 6 7 8 9 ]
+// b       [ 0 1 2 3 ]
+// c               [ 0 1 2 ]
+// d         [ 0 1 ]
+
+// a [ 0 0 0 0 0 0 0 0 0 0 ]
+// a [ 2 2 2 2 2 ]           // a.fill
+// b       [ 2 2 0 0 ]       // a.slice
+// b       [ 2 1 1 1 ]       // b.fill
+// c               [ 4 3 5 ]
+// d         [ 1 1 ]         // b.slice
+// d         [ 3 1 ]         // d.writeInt8
+// a [ 2 2 2 2 3 1 1 4 3 5 ] // c.copy
+
 test([
   'var a = Buffer(10)',
   'a.fill(2, 0, 5)',
   'var b = a.slice(3, 7)',
   'b.fill(1, 1, 3)',
   'var c = Buffer([3,4,5])',
-  'c.copy(a, 7)'
+  'c.copy(a, 7)',
+  'var d = b.slice(1, 3)',
+  'd.writeInt8(3, 0)'
 ], [
   'a.length == 10',
   'a.readInt8(0) == 2',
   'a.readInt8(1) == 2',
   'a.readInt8(2) == 2',
   'a.readInt8(3) == 2',
-  'a.readInt8(4) == 1',
+  'a.readInt8(4) == 3',
   'a.readInt8(5) == 1',
   'b.length == 4',
   'b.readInt8(0) == 2',
-  'b.readInt8(1) == 1',
+  'b.readInt8(1) == 3',
   'b.readInt8(2) == 1',
   'b.readInt8(3) == 0',
   'c.length == 3',
@@ -24,7 +40,10 @@ test([
   'c.readUInt8(2) == 5',
   'a.readUInt8(7) == 3',
   'a.readUInt8(8) == 4',
-  'a.readUInt8(9) == 5'
+  'a.readUInt8(9) == 5',
+  'd.length == 2',
+  'd.readInt8(0) == 3',
+  'd.readInt8(1) == 1'
 ]);
 
 test([
