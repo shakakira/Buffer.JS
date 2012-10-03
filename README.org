@@ -2,12 +2,15 @@
   This is a [[http://nodejs.org/][NodeJS]]'s [[http://nodejs.org/api/buffer.html][Buffer]] implementation for browser's [[http://en.wikipedia.org/wiki/ECMAScript][ECMAScript]] environment.
   
 ** Features
-   + Tiny size (base64.js+buffer.js): <25kB (source), <10kB (minified), <4kB (minified+gzipped)
+   + Tiny size (base64.js+buffer.js): ~25kB (source), ~10kB (minified), ~4kB (minified+gzipped)
    + Using /Mozilla's/ [[https://developer.mozilla.org/en-US/docs/DOM/window.btoa][btoa & atob]] functions for base64.
      If it don't supported natively, /pure JS/ implementations will be used (needs /base64.js/).
    + Using [[https://developer.mozilla.org/en-US/docs/JavaScript_typed_arrays/ArrayBuffer][ArrayBuffer]] with [[https://developer.mozilla.org/en-US/docs/JavaScript_typed_arrays/DataView][DataView]] as backend when it's available.
      It can be disabled by creating object Buffer={useDataView:false} before plugging buffer.js
+   + Using [[https://developer.mozilla.org/en-US/docs/JavaScript_typed_arrays/ArrayBuffer][ArrayBuffer]] with [[https://developer.mozilla.org/en-US/docs/JavaScript_typed_arrays][Typed Arrays]] as backend when it's available and DataView is not.
+     It can be disabled by creating object Buffer={useTypedArrays:false} before plugging buffer.js
    + Using [[https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Array][Array]] as default backend.
+     It can be forced by creating object Buffer={useArrayBuffer:false} before plugging buffer.js
      
 ** Limitations
    + In compatibility purposes avoid to use indexing (like /buffer[i]/),
@@ -27,8 +30,12 @@
    :   <!-- Plug base64 shim for compatibility with non-Mozilla -->
    :   <!-- User-Agents (see Features) -->
    :   <script src="base64.js"></script>
-   :   <!-- Uncomment next line for disabling DataView backend -->
-   :   <!-- <script>Buffer={useDataView:false};</script> -->
+   :   <!-- Uncomment next line for setting up some options -->
+   :   <!-- <script>Buffer={
+   :     //useArrayBuffer:false,
+   :     //useDataView:false,
+   :     //useTypedArrays:false
+   :   }</script> -->
    :   <script src="buffer.js"></script>
    :   <!-- your own scripts -->
    :  </head>
@@ -43,25 +50,35 @@
   | User-Agent | Version | Backend  | Status |
   |------------+---------+----------+--------|
   | Chrome     |     1.0 | Array    | OK     |
+  |            |     5.0 | Array    | OK     |
   |            |    10.0 | DataView | OK     |
   |            |    21.0 | DataView | OK     |
   | Android    |     4.0 | DataView | OK     |
-  |------------+---------+----------+--------|
-  | Safari     |     3.0 | Array    | OK     |
-  |            |     4.0 | Array    | OK     |
-  |            |     5.0 | Array    | OK     |
-  |            |     6.0 |          | --     |
-  |------------+---------+----------+--------|
-  | Firefox    |     1.0 | Array    | OK     |
-  |            |     2.0 | Array    | OK     |
-  |            |     3.0 | Array    | OK     |
-  |            |     4.0 | Array    | OK     |
-  |            |    10.0 | Array    | OK     |
-  |            |    15.0 | DataView | --     |
+  
+  | User-Agent | Version | Backend    | Status |
+  |------------+---------+------------+--------|
+  | Safari     |     3.0 | Array      | OK     |
+  |            |     4.0 | Array      | OK     |
+  |            |     5.0 | Array      | OK     |
+  |            |     5.1 | TypedArray | --     |
+  |            |     6.0 |            | --     |
+
+  | User-Agent | Version | Backend     | Status |
+  |------------+---------+-------------+--------|
+  | Firefox    |     1.0 | Array       | OK     |
+  |            |     2.0 | Array       | OK     |
+  |            |     3.0 | Array       | OK     |
+  |            |     4.0 | TypedArrays | OK     |
+  |            |    10.0 | TypedArrays | OK     |
+  |            |    15.0 | DataView    | OK     |
+
+  | User-Agent | Version | Backend  | Status |
   |------------+---------+----------+--------|
   | Opera      |     8.0 | Array    | OK     |
   |            |    10.0 | Array    | OK     |
   |            |    12.0 |          | --     |
+
+  | User-Agent | Version | Backend  | Status |
   |------------+---------+----------+--------|
   | IE         |     6.0 | Array    | OK     |
   |            |         |          |        |
