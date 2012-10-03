@@ -31,7 +31,9 @@ function test(code, asts){
     }
   }
   defer = setTimeout(function(){
-    alert(errors.length ? ('Something went wrong...\n\n' + errors.join('\n\n')) :
-          'Used backend: ' + (Buffer.hasDataView ? 'DataView' : 'Array') + '\nAll tests passed...');
+    alert('Buffer backend: ' + Buffer.backend + '\n\n' +
+          (errors.length ?
+           ('Something went wrong...\n\n' + errors.join('\n\n')) :
+           'All tests passed...'));
   }, 1);
 }
