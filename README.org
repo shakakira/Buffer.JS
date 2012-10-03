@@ -61,7 +61,7 @@
   |            |     4.0 | Array      | OK     |
   |            |     5.0 | Array      | OK     |
   |            |     5.1 | TypedArray | --     |
-  |            |     6.0 |            | --     |
+  |            |     6.0 | DataView   | OK     |
 
   | User-Agent | Version | Backend     | Status |
   |------------+---------+-------------+--------|
@@ -75,10 +75,17 @@
   | User-Agent | Version | Backend  | Status |
   |------------+---------+----------+--------|
   | Opera      |     8.0 | Array    | OK     |
+  |            |     9.0 | Array    | OK     |
   |            |    10.0 | Array    | OK     |
-  |            |    12.0 |          | --     |
+  |            |    11.0 | Array    | OK     |
+  |            |    12.0 | DataView | OK     |
 
   | User-Agent | Version | Backend  | Status |
   |------------+---------+----------+--------|
   | IE         |     6.0 | Array    | OK     |
-  |            |         |          |        |
+  |            |     7.0 | Array    | OK     |
+  |            |     8.0 | Array    | OK     |
+  |            |     9.0 | Array    | --     |
+  |            |    10.0 | DataView | --     |
+
+  Status «--» means what this configuration does not tested.
